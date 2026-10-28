@@ -1,0 +1,77 @@
+---
+layout: runbook
+title: '#4471 split · one ticket per problem'
+owner: bskertchly
+status: open
+reviewed: 2026-10-28
+signature: v1.eyJzdWIiOiIyNTM4IiwiYXVkIjoiY2hhbGxlbmdlOndoYXQtaXQtc2hvd3MiLCJpYXQiOjE3OTMyMjY2NzUsImV4cCI6MTc5MzMxMzA3NX0.T4rrA3RWJwC3wXyRxoJ6-tDpb1C0ogL_BNji3M-BYj0
+---
+
+<script>
+  import ProblemTable from '#lib/kb/ProblemTable.svelte';
+  import CauseTable from '#lib/kb/CauseTable.svelte';
+  import Callout from '#lib/kb/Callout.svelte';
+  import RenderStamp from '#lib/kb/RenderStamp.svelte';
+</script>
+
+[#4471](/kb/incidents/4471) holds every report about a wrong date since April. The desk merged them on
+subject line ([decision 0001](/kb/decisions/0001-dedupe-by-subject)), and the subjects all say the
+same thing: wrong day. Read by tenant and by what the dates did, the reports hold separate problems.
+Each one now has a ticket of its own.
+
+<Callout kind="warn">
+#4471 is not one known issue. The queued parser fix closes one of its problems. The others
+stay open after it ships.
+</Callout>
+
+## The problems
+
+<ProblemTable
+  ticket={4471}
+  tickets={{
+    parser: 'https://github.com/bskertchly/mega-s01e03-what-it-shows/issues/1',
+    hint: 'https://github.com/bskertchly/mega-s01e03-what-it-shows/issues/2',
+    'one-day move': 'https://github.com/bskertchly/mega-s01e03-what-it-shows/issues/3',
+  }}
+/>
+
+### parser: the shared parser reads dates month first
+
+Every tenant on file writes dates day first. The shared parser reads them month first, so a booking
+for 7 April lands on 4 July. This is the bug #4471 names, and the queued fix is for it.
+[Ticket](https://github.com/bskertchly/mega-s01e03-what-it-shows/issues/1).
+
+### hint: the booking-v3 form shows the wrong order
+
+The booking-v3 form prints `MM/DD/YYYY` under its date field, then reads what people type in the
+tenant's day-first order. People do what the hint says, and the date flips before the parser sees
+it. The result looks the same as the parser bug, but the parser fix does not touch it. Fix the hint,
+or make the form read the order it shows.
+[Ticket](https://github.com/bskertchly/mega-s01e03-what-it-shows/issues/2).
+
+### one-day move: the date moves by one day
+
+Some reports are not a swap. The date moves by one day: Tuesday 12 May shows as Monday 11 May, a
+client in Lisbon gets Tuesday and a client in Toronto gets Monday, and one tenant sees it only in
+June. That points at time zones or daylight saving, not date order. The desk had already noted these
+reports (`desk-notes.json`), but the table on #4471 counts them under `parser`.
+[Ticket](https://github.com/bskertchly/mega-s01e03-what-it-shows/issues/3).
+
+## How the counts are made
+
+The table above runs the kb's own cause logic (`causes.ts`) over the ticket export at render time,
+one report per id, then takes the desk's one-day moves out of the cause their tenant puts them in.
+For comparison, this is the table on #4471:
+
+<CauseTable ticket={4471} />
+
+Intake tags (`parser`, `hint`) come from the reporter's browser and disagree with the cause in
+both groups. Count by tenant, not by tag.
+
+## For the desk
+
+- Merging on subject put separate problems in one ticket. Before you mark a big ticket known, run it
+  through the causes and read the reports that do not fit.
+- When the parser fix ships, close the parser ticket, not #4471.
+
+<RenderStamp {signature} />
